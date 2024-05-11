@@ -7,6 +7,7 @@ from omegaconf import OmegaConf
 from dataset.dataloader import get_dataloader
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger 
 from torchvision.utils import save_image
 
 from util import *
@@ -16,9 +17,8 @@ def train():
 
     sys.path.append(os.getcwd())
 
-    # torch settings
-    torch.multiprocessing.set_start_method('spawn') # multiprocess mode
-    torch.set_float32_matmul_precision('medium') # matrix multiply precision
+    torch.multiprocessing.set_start_method('spawn')  
+    torch.set_float32_matmul_precision('medium')  
 
     config_path = 'configs/train.yaml'
     cfgs = OmegaConf.load(config_path)
@@ -30,14 +30,17 @@ def train():
     model = init_model(cfgs)
     model.learning_rate = cfgs.base_learning_rate
 
-    checkpoint_callback = ModelCheckpoint(dirpath = cfgs.save_ckpt_dir, every_n_epochs = cfgs.save_ckpt_freq)
+    # I initialized the TensorBoard logger
+    logger = TensorBoardLogger("tb_logs", name="Hubert")
 
-    trainer = pl.Trainer(callbacks = [checkpoint_callback], **cfgs.lightning)
-    trainer.fit(model = model, train_dataloaders = dataloader)
+    # Changed code to save a checkpoint for checkpoint
+    checkpoint_callback = ModelCheckpoint(dirpath=cfgs.save_ckpt_dir, filename='huber_{epoch}-{step}', save_top_k=-1, every_n_epochs=1)
+
+    # I added code to pass the logger to the trainer
+    trainer = pl.Trainer(callbacks=[checkpoint_callback], logger=logger, **cfgs.lightning)
+    trainer.fit(model=model, train_dataloaders=dataloader)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
     train()
-
-
